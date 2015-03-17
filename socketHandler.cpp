@@ -56,7 +56,7 @@ int SocketHandler::update()
         }
         else if (ret == 0) // No Data!
         {
-            if (TheAnsiParser::Instance()->isCursorActive())
+            if (TheSequenceParser::Instance()->isCursorActive())
             {
                 startBlinking = true;
                 // Setup Timer for Blinking Cursor

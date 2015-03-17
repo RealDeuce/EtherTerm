@@ -563,7 +563,7 @@ void Terminal::pullSelectionBuffer(int x, int y)
     int numberRows  = rect.h / charHeight;
 
     // Use coords to pull screen text directly from screen buffer.
-    TheAnsiParser::Instance()->bufferToClipboard(
+    TheSequenceParser::Instance()->bufferToClipboard(
         startColumn, startRow,
         length, numberRows);
 }
@@ -968,7 +968,7 @@ bool Terminal::loadBitmapImage(std::string fontName)
     // Redraw Cursor with new font!
     // When no data received, this is when we want to show the cursor!
     // Setup cursor in current x/y position Cursor.
-    if (TheAnsiParser::Instance()->isCursorActive())
+    if (TheSequenceParser::Instance()->isCursorActive())
     {
         setupCursorChar();
         renderCursorOnScreen();
@@ -1697,8 +1697,8 @@ void Terminal::renderCursorOnScreen()
     SDL_Rect rect;
 
     // Check if the position has changed, if so, then skip!
-    if(cursorXPosition != TheAnsiParser::Instance()->x_position-1 ||
-        cursorYPosition != TheAnsiParser::Instance()->y_position-1)
+    if(cursorXPosition != TheSequenceParser::Instance()->x_position-1 ||
+        cursorYPosition != TheSequenceParser::Instance()->y_position-1)
     {
         return;
     }
@@ -1746,8 +1746,8 @@ void Terminal::renderCursorOffScreen()
     SDL_Rect rect;
 
     // Check if the position has changed, if so, then skip!
-    if(cursorXPosition != TheAnsiParser::Instance()->x_position-1 ||
-        cursorYPosition != TheAnsiParser::Instance()->y_position-1)
+    if(cursorXPosition != TheSequenceParser::Instance()->x_position-1 ||
+        cursorYPosition != TheSequenceParser::Instance()->y_position-1)
     {
         return;
     }
@@ -1970,8 +1970,8 @@ void Terminal::replaceColor(SDL_Surface *src, Uint32 foreground, Uint32 backgrou
  */
 void Terminal::setupCursorChar()
 {
-    cursorXPosition = TheAnsiParser::Instance()->x_position-1;
-    cursorYPosition = TheAnsiParser::Instance()->y_position-1;
+    cursorXPosition = TheSequenceParser::Instance()->x_position-1;
+    cursorYPosition = TheSequenceParser::Instance()->y_position-1;
 
     SDL_Rect pick, area;
 
@@ -2074,7 +2074,7 @@ void Terminal::setupCursorChar()
         SDL_UnlockSurface(cursorOnSurface);
 
     // Render the initial cursor only if it's exposed!
-    if (TheAnsiParser::Instance()->isCursorActive())
+    if (TheSequenceParser::Instance()->isCursorActive())
     {
         TheTerminal::Instance()->renderCursorOnScreen();
         TheTerminal::Instance()->drawTextureScreen();

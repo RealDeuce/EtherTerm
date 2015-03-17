@@ -19,15 +19,15 @@
 #include <string>
 #include <vector>
 
-class AnsiParser
+class SequenceParser
 {
 public:
 
-    static AnsiParser* Instance()
+    static SequenceParser* Instance()
     {
         if(globalInstance == 0)
         {
-            globalInstance = new AnsiParser();
+            globalInstance = new SequenceParser();
         }
         return globalInstance;
     }
@@ -189,14 +189,14 @@ private:
     SDL_Color savedForegroundColor;
     SDL_Color savedBackgroundColor;
 
-    AnsiParser();
-    ~AnsiParser();
-    AnsiParser(const AnsiParser&);
-    AnsiParser& operator=(const AnsiParser&);
+    SequenceParser();
+    ~SequenceParser();
+    SequenceParser(const SequenceParser&);
+    SequenceParser& operator=(const SequenceParser&);
 
-    static AnsiParser* globalInstance;
+    static SequenceParser* globalInstance;
 };
 
-typedef AnsiParser TheAnsiParser;
+typedef SequenceParser TheSequenceParser;
 
 #endif

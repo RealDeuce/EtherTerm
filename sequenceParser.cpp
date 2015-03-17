@@ -1067,7 +1067,7 @@ void SequenceParser::processSequence(std::string inputString)
             // Then switch to Processing State, So we have FIFO Data
             // Parsing.
             case SEQ_START:
-                TheAnsiParser::Instance()->textInput(validOutputData);
+                TheSequenceParser::Instance()->textInput(validOutputData);
                 validOutputData.erase();
                 sequenceState = SEQ_PROCESSING;
                 sequenceBuilder += sequence;
@@ -1249,7 +1249,7 @@ void SequenceParser::processSequence(std::string inputString)
 
             case SEQ_DONE:
                 // We hit an entire sequence, pass the vector
-                TheAnsiParser::Instance()->sequenceInput(params);
+                TheSequenceParser::Instance()->sequenceInput(params);
                 std::vector<int>().swap(params); // Clear for next run.
                 sequenceState = SEQ_NORMAL; // Reset The State
                 sequenceBuilder.erase();
@@ -1274,7 +1274,7 @@ void SequenceParser::processSequence(std::string inputString)
     // Catch any echo'ed input that passed through with no sequences
     if (sequenceState == SEQ_NORMAL && validOutputData.size() > 0)
     {
-        TheAnsiParser::Instance()->textInput(validOutputData);
+        TheSequenceParser::Instance()->textInput(validOutputData);
         validOutputData.erase();
     }    
 
@@ -1284,7 +1284,7 @@ void SequenceParser::processSequence(std::string inputString)
 
     // When no data received, this is when we want to show the cursor!
     // Setup cursor in current x/y position Cursor.
-    if (TheAnsiParser::Instance()->isCursorActive())
+    if (TheSequenceParser::Instance()->isCursorActive())
     {
         TheTerminal::Instance()->setupCursorChar();
         TheTerminal::Instance()->renderCursorOnScreen();

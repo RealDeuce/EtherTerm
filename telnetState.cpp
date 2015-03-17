@@ -194,7 +194,7 @@ void TelnetState::update()
 
 bool TelnetState::onEnter()
 {
-    TheAnsiParser::Instance()->setCursorActive(true);
+    TheSequenceParser::Instance()->setCursorActive(true);
     std::cout << "entering TelnetState\n";
     shutdown = false;
     //char host[255]= {"entropybbs.co.nz"};
@@ -249,7 +249,7 @@ bool TelnetState::onEnter()
     TheTerminal::Instance()->clearScreenSurface();
     TheTerminal::Instance()->renderScreen();
     TheTerminal::Instance()->drawTextureScreen();
-    TheAnsiParser::Instance()->reset();
+    TheSequenceParser::Instance()->reset();
     return true;
 }
 
@@ -258,7 +258,7 @@ bool TelnetState::onExit()
     std::cout << "TelnetState::onExit()" << std::endl;
     // reset the handler(s)
     TheInputHandler::Instance()->reset();
-    TheAnsiParser::Instance()->reset();
+    TheSequenceParser::Instance()->reset();
     TheSocketHandler::Instance()->reset();
     shutdown = true;
     std::cout << "exiting TelnetState" << std::endl;

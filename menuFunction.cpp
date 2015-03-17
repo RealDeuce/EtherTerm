@@ -732,8 +732,8 @@ void MenuFunction::menuLightBars(char *inPut)
         sequence = inputSequence[0];
 
        // Testing Screen Buffer.
-       //TheAnsiParser::Instance()->clearScreenBuffer();
-       //TheAnsiParser::Instance()->getScreenBufferText();
+       //TheSequenceParser::Instance()->clearScreenBuffer();
+       //TheSequenceParser::Instance()->getScreenBufferText();
 
         // Check here for Arrow Key / Escaped Input was Received
         if ((int)sequence == 27)
@@ -1345,7 +1345,7 @@ void MenuFunction::getLine(char *line,   // Returns Input into Line
         }
         else
         {
-            if (TheAnsiParser::Instance()->isCursorActive() && !TheInputHandler::Instance()->isGlobalShutdown())
+            if (TheSequenceParser::Instance()->isCursorActive() && !TheInputHandler::Instance()->isGlobalShutdown())
             {
                 startBlinking = true;
                 // Setup Timer for Blinking Cursor

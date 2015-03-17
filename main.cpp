@@ -95,7 +95,7 @@ void cleanup()
     TheTerminal::Instance()->clean();
 
     //Release Instances
-    TheAnsiParser::ReleaseInstance();
+    TheSequenceParser::ReleaseInstance();
     TheSequenceParser::ReleaseInstance();
     TheSocketHandler::ReleaseInstance();
     TheInputHandler::ReleaseInstance();
@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
 
                 // Display intro ANSI Screen
                 TheTerminal::Instance()->clearScreenSurface();
-                TheAnsiParser::Instance()->reset();
+                TheSequenceParser::Instance()->reset();
 
                 while(TheTerminal::Instance()->running())
                 {

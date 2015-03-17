@@ -82,7 +82,7 @@ void MainMenuState::update()
 
 bool MainMenuState::onEnter()
 {
-    TheAnsiParser::Instance()->setCursorActive(false);
+    TheSequenceParser::Instance()->setCursorActive(false);
 
     // Setup Defaults for Interface.
     directoryTopMargin = 1;
@@ -378,7 +378,7 @@ void MainMenuState::parseHeader(std::string FileName)
     if(TheTerminal::Instance()->didFontChange())
         TheTerminal::Instance()->loadBitmapImage(TheTerminal::Instance()->getCurrentFont());
 
-    TheAnsiParser::Instance()->reset();
+    TheSequenceParser::Instance()->reset();
     MenuFunction::displayAnsiFile(FileName);
 }
 

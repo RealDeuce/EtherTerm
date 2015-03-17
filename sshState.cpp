@@ -154,7 +154,7 @@ void SSHState::update()
 
 bool SSHState::onEnter()
 {
-    TheAnsiParser::Instance()->setCursorActive(true);
+    TheSequenceParser::Instance()->setCursorActive(true);
     std::cout << "entering SSHState\n";
     shutdown = false;
 
@@ -214,7 +214,7 @@ bool SSHState::onEnter()
                 shutdown = true;
                 TheTerminal::Instance()->clearScreenSurface();
                 TheTerminal::Instance()->renderScreen();
-                TheAnsiParser::Instance()->reset();
+                TheSequenceParser::Instance()->reset();
                 return false;
             }
             else if (strcmp(rBuffer,"") != 0 && strcmp(rBuffer,"\n") != 0)
@@ -230,7 +230,7 @@ bool SSHState::onEnter()
             shutdown = true;
             TheTerminal::Instance()->clearScreenSurface();
             TheTerminal::Instance()->renderScreen();
-            TheAnsiParser::Instance()->reset();
+            TheSequenceParser::Instance()->reset();
             return false;
         }
 
@@ -253,7 +253,7 @@ bool SSHState::onEnter()
                 shutdown = true;
                 TheTerminal::Instance()->clearScreenSurface();
                 TheTerminal::Instance()->renderScreen();
-                TheAnsiParser::Instance()->reset();
+                TheSequenceParser::Instance()->reset();
                 return false;
             }
             else if (strcmp(rBuffer,"\n") != 0)
@@ -279,7 +279,7 @@ bool SSHState::onEnter()
         shutdown = true;
         TheTerminal::Instance()->clearScreenSurface();
         TheTerminal::Instance()->renderScreen();
-        TheAnsiParser::Instance()->reset();
+        TheSequenceParser::Instance()->reset();
         return false;
     }
 
@@ -308,14 +308,14 @@ bool SSHState::onEnter()
         shutdown = true;
         TheTerminal::Instance()->clearScreenSurface();
         TheTerminal::Instance()->renderScreen();
-        TheAnsiParser::Instance()->reset();
+        TheSequenceParser::Instance()->reset();
         return false;
     }
  
     // Clear Renderer and Ansi Parser for Fresh Connection.
     TheTerminal::Instance()->clearScreenSurface();
     TheTerminal::Instance()->renderScreen();
-    TheAnsiParser::Instance()->reset();
+    TheSequenceParser::Instance()->reset();
     return true;
 }
 
@@ -325,7 +325,7 @@ bool SSHState::onExit()
     
     // reset the handler(s)
     TheInputHandler::Instance()->reset();
-    TheAnsiParser::Instance()->reset();
+    TheSequenceParser::Instance()->reset();
     TheSocketHandler::Instance()->reset();
 
     shutdown = true;

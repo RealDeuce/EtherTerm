@@ -1,10 +1,3 @@
-
-// EtherTerm SVN: $Id$
-// Source: $HeadURL$
-// $LastChangedDate$
-// $LastChangedRevision$
-// $LastChangedBy$
-
 #include "sequenceParser.h"
 #include "socketHandler.h"
 #include "inputHandler.h"
@@ -17,22 +10,23 @@
 using namespace std;
 
 // Screen Buffer Vector Constructors
-AnsiParser::myScreen::myScreen()
+SequenceParser::myScreen::myScreen()
 {
     characterSequence = "";
 }
 
-AnsiParser::myScreen::myScreen(std::string sequence, SDL_Color fg, SDL_Color bg)
+SequenceParser::myScreen::myScreen(std::string sequence, SDL_Color fg, SDL_Color bg)
 : characterSequence(sequence), foreground(fg), background(bg) { }
 
-/**
- * handle screen buffer, Keeps track of all data
- * Poltted through the Ansi Parser so we can pull
+/*
+   State machine for 
+ * Handle screen buffer, Keeps track of all data
+ * Plotted through the Sequence Parser so we can pull
  * Text and or redraw screens at anytime.
  */    
-void AnsiParser::setScreenBuffer(std::string mySequence)
+void SequenceParser::setScreenBuffer(std::string mySequence)
 {
-    // Keep track of the lonest line in buffer for Centering screen.
+    // Keep track of the longest line in buffer for Centering screen.
     // NOT IN USE CURRENTLY
     //if (x_position > max_x_position)
     //    max_x_position = x_position;
@@ -65,7 +59,7 @@ void AnsiParser::setScreenBuffer(std::string mySequence)
 /*
  * Moves the Screen Buffer Up a line to match the internal SDL_Surface
  */
-void AnsiParser::scrollScreenBuffer()
+void SequenceParser::scrollScreenBuffer()
 {
     //*** IMPORTANT (WIP), must add check for region scrolling only!
     //TheTerminal::Instance()->scrollRegionActive &&
@@ -92,7 +86,7 @@ void AnsiParser::scrollScreenBuffer()
 /*
  * Clear Range of Screen Buffer for Erase Sequences.
  */
-void AnsiParser::clearScreenBufferRange(int start, int end)
+void SequenceParser::clearScreenBufferRange(int start, int end)
 {
     int startPosition = ((y_position-1) * characters_per_line) + (start);
     int endPosition = startPosition + (end - start);
@@ -120,7 +114,7 @@ void AnsiParser::clearScreenBufferRange(int start, int end)
 /*
  * When the Screen/Surface is cleared, we also clear the buffer
  */
-void AnsiParser::clearScreenBuffer()
+void SequenceParser::clearScreenBuffer()
 {
     // Allocate the Size
     screenBuffer.clear();
@@ -128,7 +122,7 @@ void AnsiParser::clearScreenBuffer()
 }
 
 // Debug to console.
-void AnsiParser::getScreenBufferText()
+void SequenceParser::getScreenBufferText()
 {
     //std::cout << "* getScreenBufferText" << std::endl; // Start Fresh line.
     for (auto &it : screenBuffer)
@@ -145,7 +139,7 @@ void AnsiParser::getScreenBufferText()
  * Screen Buffer Positions, Now we pull the position and throw the
  * Text data into the Clipboard.
  */
-void AnsiParser::bufferToClipboard(int startx, int starty, int numChar, int numRows)
+void SequenceParser::bufferToClipboard(int startx, int starty, int numChar, int numRows)
 {
     std::string textBuffer = "";
     int startPosition = ((starty) * characters_per_line) + (startx);
@@ -185,9 +179,9 @@ void AnsiParser::bufferToClipboard(int startx, int starty, int numChar, int numR
 }
 
 
-AnsiParser* AnsiParser::globalInstance = 0;
+SequenceParser* SequenceParser::globalInstance = 0;
 
-AnsiParser::AnsiParser() :
+SequenceParser::SequenceParser() :
     x_position(1),
     y_position(1),
     preceedingSequence('\0'),
@@ -213,9 +207,9 @@ AnsiParser::AnsiParser() :
     TheTerminal::Instance()->setScrollRegion(0, 0, TERM_HEIGHT);
 }
 
-AnsiParser::~AnsiParser()
+SequenceParser::~SequenceParser()
 {
-    std::cout << "AnsiParser Released" << std::endl;
+    std::cout << "SequenceParser Released" << std::endl;
     try
     {
         std::vector<myScreen>().swap(screenBuffer); // Clear
@@ -228,9 +222,9 @@ AnsiParser::~AnsiParser()
 }
 
 /*
- * Reset AnsiParser Sepcific Class Attributes
+ * Reset SequenceParser Sepcific Class Attributes
  */
-void AnsiParser::reset()
+void SequenceParser::reset()
 {
     x_position = 1;
     y_position = 1;
@@ -256,7 +250,7 @@ void AnsiParser::reset()
 /*
  * Handles parsing Text and formatting to the screen buffer
  */
-void AnsiParser::textInput(std::string buffer)
+void SequenceParser::textInput(std::string buffer)
 {
     // Char Sequence for Parsing.
     unsigned char sequence = 0;
@@ -281,7 +275,7 @@ void AnsiParser::textInput(std::string buffer)
         }
         catch (std::exception e)
         {
-            std::cout << "Exception AnsiParser::textInput: "
+            std::cout << "Exception SequenceParser::textInput: "
                 << e.what() << std::endl;
         }
 
@@ -298,24 +292,67 @@ void AnsiParser::textInput(std::string buffer)
             continue;
         }
 
-        // Handle New Line in ANSI Files properly.
+        /* A POSIX application writes only a single '\n' for both carriage
+           return *and* newline, but tty(4) or pty(4) driver actually emits
+           '\r\n' to output.  An example in python(2) using echo(1) and the
+           `subprocess' for execution without a terminal driver:
+
+               >>> out, err = subprocess.Popen(['/bin/echo', 'test'],
+                                               stdout=subprocess.PIPE
+                                              ).communicate()
+               >>> out
+               'test\n'
+
+           And another example using the 3rd-party pexpect library which
+           executes the given program using a pty(4) device:
+
+               >>> import pexpect
+               >>> pexpect.run('echo test')
+               'test\r\n'
+
+           EtherTerm should expect that any remote resource (telnet, ssh)
+           it connects to should also implement a tty(4) driver, emitting
+           the full '\r\n' sequence:  that is, given a shell on a remote
+           resource, the command isatty(3) should most definitely return
+           true.
+
+           On a system such as Windows or CP/M which do not provide any
+           kind of terminal driver, it is necessary for data displayed
+           to the screen to match that of a printer device:  therefore,
+           the native ASCII filetype of such systems is strictly '\r\n'.
+
+           In all such cases, we should always expect '\r' to be followed
+           by '\n'.  If an '\n' without a preceding '\r' is discovered, or
+           an '\r' without a succeeding '\n', we should assume that the
+           remote machine's intention is that of a real terminal:
+             * for '\r' to perform *only* a carriage return, matching
+               matching terminfo(5) capability call of `hpa(0)' for
+               horizontal position, absolute: column 0
+             * for '\n' to perform *only* a new line: to "linefeed" the
+               output device but carriage return remains at its column
+               position, matching "cud1" for cursor down one line.
+
+          However, this behavior *can* be altered by the termios(4) output
+          mode ONLCR: map `newline, \n' to `carriage return-newline \r\n'
+          and ONLRET: `newline' performs `carriage return' function.
+
+          Furthermore, no erasing of subsequent characters of the current
+          line when CR+LF is received, as can be seen by this python(2)
+          example using the blessings module::
+          
+          >>> from blessings import Terminal
+          >>> term = Terminal()
+          >>> print('xXzZy\n' + term.move_up + term.move_right + '->' + '\n')
+              x->Zy
+        */
+
+        // Handle New Line characters as received by a tty driver.
         if(sequence == '\r' && nextSequence == '\n')
         {
-            // std::cout << std::endl << "CRLF xpos: " << x_position << std::endl;
-            // If we recieve a new line, any existing text on the same line
-            // After the cursor position should be cleared.
-            // -- need more testing.
-            /* This isn't confirmed behavior yet, doesn't work on oddnetwork.
-             * Bad Ansi or bad behavior?
-             *
-            if (x_position < 81)
-            {
-                TheTerminal::Instance()->renderClearLineScreen(y_position-1,
-                            x_position-1, characters_per_line); // test removeed -1
-
-                clearScreenBufferRange(x_position-1, characters_per_line);
-            }*/
-
+#ifdef DEBUG
+            fprintf(stderr, "CRLF@(y,x): (%d,%d)\n",
+                    y_position, x_position);
+#endif
             // Stupid fix for expected behavior.  If were on col 81
             // And we get a newline, then were suppose to wrap to next line
             // But also move down a second line!
@@ -324,16 +361,17 @@ void AnsiParser::textInput(std::string buffer)
                 ++y_position;
             }
 
-            ++i; // Incriment past \n (2) char combo.
+            ++i; // Increment past \n (2) char combo.
             x_position = 1;
             ++y_position;
 
-            // Add back for ?7h handeling on different TERM WIDTHS
+            // Add back for ?7h handling on different TERM WIDTHS
             if(!line_wrapped)
             {
                 //screen_buff.color_sequence += "\x1b[40m";
                 //screenbuffer('\r');
             }
+
             // Check here if we need to scroll the screen up 1 row.
             if(y_position > NUM_LINES ||
                     (TheTerminal::Instance()->scrollRegionActive &&
@@ -345,9 +383,15 @@ void AnsiParser::textInput(std::string buffer)
                 // Row by Row.
                 if(cleared_the_screen)
                 {
-                    TheTerminal::Instance()->renderScreen();       // Surface to Texture
-                    TheTerminal::Instance()->drawTextureScreen();  // Draw Texture to Screen
-                    TheTerminal::Instance()->scrollScreenUp();     // Scroll the surface up
+                    // Surface to Texture
+                    TheTerminal::Instance()->renderScreen();
+
+                    // Draw Texture to Screen
+                    TheTerminal::Instance()->drawTextureScreen();
+
+                    // Scroll the surface up
+                    TheTerminal::Instance()->scrollScreenUp();
+
                     scrollScreenBuffer();
                     if(!TheTerminal::Instance()->scrollRegionActive)
                         y_position = NUM_LINES;
@@ -357,9 +401,15 @@ void AnsiParser::textInput(std::string buffer)
                 }
                 else
                 {
-                    TheTerminal::Instance()->renderBottomScreen();   // Surface to Texture of Bottom Row.
-                    TheTerminal::Instance()->drawTextureScreen();    // Testure to Screen
-                    TheTerminal::Instance()->scrollScreenUp();       // Scroll up for next line.
+                    // Surface to Texture of Bottom Row.
+                    TheTerminal::Instance()->renderBottomScreen();
+
+                    // Texture to Screen
+                    TheTerminal::Instance()->drawTextureScreen();
+
+                    // Scroll up for next line.
+                    TheTerminal::Instance()->scrollScreenUp();
+
                     scrollScreenBuffer();
                     if(!TheTerminal::Instance()->scrollRegionActive)
                         y_position = NUM_LINES;
@@ -367,78 +417,50 @@ void AnsiParser::textInput(std::string buffer)
                         y_position = TheTerminal::Instance()->bottomMargin;
                 }
             }
-            //printf("\r\n xpos %i, ypos %i \r\n",x_position, y_position);
+#ifdef DEBUG
+            fprintf(stderr, "CRLF caused scroll\n")
+#endif
             continue;
         }
         else if(sequence == '\r')
         {
-            // std::cout << std::endl << "CR xpos: " << x_position << std::endl;
-            // Stupid fix for expected behavior.  If were on col 81
-            // And we get a newline, then were suppose to wrap to next line
-            // But also move down a second line!
+#ifdef DEBUG
+            fprintf(stderr, "!! warning: CR w/o LF@(y,x): (%d,%d)\n",
+                    y_position, x_position);
+#endif
             if (x_position == 81)
             {
                 ++y_position;
             }
 
             x_position = 1;
-            // Add back for ?7h handeling on different TERM WIDTHS
-            if(!line_wrapped)
-            {
-                //screen_buff.color_sequence += "\x1b[40m";
-                //screenbuffer('\r');
-            }
             continue;
         }
         else if(sequence == '\n')
         {
-            // std::cout << std::endl << "LF xpos: " << x_position << std::endl;
-
-            // If we recieve a new line, any existing text on the same line
-            // After the cursor position should be cleared.
-            // -- need more testing.
-            /* This isn't confirmed behavior yet, doesn't work on oddnetwork.
-             * Bad Ansi or bad behavior?
-             *
-            if (x_position < 81)
-            {
-                TheTerminal::Instance()->renderClearLineScreen(y_position-1,
-                            x_position-1, characters_per_line); // test removeed -1
-                clearScreenBufferRange(x_position-1, characters_per_line);
-            }*/
-
-            // Stupid fix for expected behavior.  If were on col 81
-            // And we get a newline, then were suppose to wrap to next line
-            // But also move down a second line!
+#ifdef DEBUG
+            fprintf(stderr, "!! warning: LF w/o CR@(y,x): (%d,%d)\n",
+                    y_position, x_position);
+#endif
             if (x_position == 81)
             {
                 ++y_position;
             }
 
-            //printf("LF");
-            // Set position 0, casue next check incriments to 1.
+            // Set position 0, because next check increments to 1.
             x_position = 1;
             ++y_position;
 
-            // Add back for ?7h handeling on different TERM WIDTHS
-            if(!line_wrapped)
-            {
-                //screen_buff.color_sequence += "\x1b[40m";
-                //screenbuffer('\r');
-            }
             // Check here if we need to scroll the screen.
             if(y_position > NUM_LINES ||
                     (TheTerminal::Instance()->scrollRegionActive &&
                      y_position > TheTerminal::Instance()->bottomMargin))
             {
-                // If we cleared the screen and hit bottom row, then
-                // The very first time we want to spit out the entire screen
-                // Since nothing has been drawn yet before we scroll thes screen.
                 if(cleared_the_screen)
                 {
-                    TheTerminal::Instance()->renderScreen();       // Surface to Texture
-                    TheTerminal::Instance()->drawTextureScreen();  // Draw Texture to Screen
-                    TheTerminal::Instance()->scrollScreenUp();     // Scroll the surface up
+                    TheTerminal::Instance()->renderScreen();
+                    TheTerminal::Instance()->drawTextureScreen();
+                    TheTerminal::Instance()->scrollScreenUp();
                     scrollScreenBuffer();
                     if(!TheTerminal::Instance()->scrollRegionActive)
                         y_position = NUM_LINES;
@@ -448,9 +470,9 @@ void AnsiParser::textInput(std::string buffer)
                 }
                 else
                 {
-                    // Else we want to just append to the last line
-                    // Move the last line to the Texture, then
-                    // Redisplay the scrren.
+                    /* Otherwise, just append to the last line and move the
+                       last line to the Texture, then refresh the screen.
+                    */
                     TheTerminal::Instance()->renderBottomScreen();   // Surface to Texture of Bottom Row.
                     TheTerminal::Instance()->drawTextureScreen();    // Testure to Screen
                     TheTerminal::Instance()->scrollScreenUp();       // Scroll up for next line.
@@ -503,7 +525,8 @@ void AnsiParser::textInput(std::string buffer)
                     scrollScreenBuffer();
                     y_position = TheTerminal::Instance()->bottomMargin;
                     cleared_the_screen = false;
-                    // Reset to begining of line.
+
+                    // Reset to beginning of line.
                     if(x_position > characters_per_line)
                         x_position = 1;
                 }
@@ -519,21 +542,19 @@ void AnsiParser::textInput(std::string buffer)
             }
             else
             {
-                // Else we want to just append to the last line
-                // Move the last line to the Texture, then
-                // Redisplay the scrren.
-                // test if scrolling region is active and were drawing in it.
                 if(TheTerminal::Instance()->scrollRegionActive &&
                         y_position >= TheTerminal::Instance()->topMargin &&
                         y_position <= TheTerminal::Instance()->bottomMargin)
                 {
-                    TheTerminal::Instance()->renderBottomScreen();   // Surface to Texture of Bottom Row.
-                    TheTerminal::Instance()->drawTextureScreen();    // Testure to Screen
-                    TheTerminal::Instance()->scrollScreenUp();       // Scroll up for next line.
+                    TheTerminal::Instance()->renderBottomScreen();
+                    TheTerminal::Instance()->drawTextureScreen();
+                    TheTerminal::Instance()->scrollScreenUp();
                     scrollScreenBuffer();
-                    // Reset to begining of line.
+
+                    // Reset to beginning of line.
                     if(x_position > characters_per_line)
                         x_position = 1;
+
                     y_position = TheTerminal::Instance()->bottomMargin;
                 }
                 else if(y_position > NUM_LINES)
@@ -550,9 +571,8 @@ void AnsiParser::textInput(std::string buffer)
         // Render Char Screen Position 0 Based from 1 Based.
         TheTerminal::Instance()->drawChar(x_position-1, y_position-1, sequence);        // Char to Surface
 
-        // Add to Screen Buffer, Right now were testing unsigned characters,
-        // This will be updated to std::string[0] for ascii characers
-        // with extra checking for unicode soon!
+        // Add to Screen Buffer.
+        // TODO(mgriffin,jquast): use std:string for unicode
         std::string tempSequence;   // Just temp for now.
         tempSequence = (signed)sequence;
         setScreenBuffer(tempSequence);
@@ -566,7 +586,7 @@ void AnsiParser::textInput(std::string buffer)
 /*
  * Handle Screen Position and Display Erase
  */
-void AnsiParser::sequenceCursorAndDisplay()
+void SequenceParser::sequenceCursorAndDisplay()
 {
     // Switch on Sequence Terminator
     switch(parameters[0])
@@ -644,8 +664,10 @@ void AnsiParser::sequenceCursorAndDisplay()
             else if(parameters.size() == 3 && parameters[1] == -1)
             {
                 x_position = parameters[2];
+
                 if(x_position > characters_per_line)
                     x_position = characters_per_line;
+
             }
             else
             {
@@ -659,6 +681,7 @@ void AnsiParser::sequenceCursorAndDisplay()
 
                 if(x_position > characters_per_line)
                     x_position = characters_per_line;
+
                 else if(x_position < 1)
                     x_position = 1;
             }
@@ -715,6 +738,7 @@ void AnsiParser::sequenceCursorAndDisplay()
             {
                 //if (x_position < characters_per_line)
                 ++x_position;
+
                 if(x_position > characters_per_line)
                 {
                     x_position -= characters_per_line;
@@ -850,7 +874,7 @@ void AnsiParser::sequenceCursorAndDisplay()
  * Handle Switching Graphics Mode
  * Colors and Cursor modes.
  */
-void AnsiParser::sequenceGraphicsModeDisplay()
+void SequenceParser::sequenceGraphicsModeDisplay()
 {
     // Switch on Sequence Terminator
     switch(parameters[0])
@@ -1682,7 +1706,7 @@ void AnsiParser::sequenceGraphicsModeDisplay()
 /*
  * Handle Mode Resets and Responses to Server
  */
-void AnsiParser::sequenceResetAndResponses()
+void SequenceParser::sequenceResetAndResponses()
 {
     switch(parameters[0])
     {
@@ -1770,7 +1794,7 @@ void AnsiParser::sequenceResetAndResponses()
  * Broken up into (3) Functions to keep it simple and easier to track
  * and maintain. Source Data comes from sequenceParser.cpp
  */
-void AnsiParser::sequenceInput(std::vector<int> sequenceParameters)
+void SequenceParser::sequenceInput(std::vector<int> sequenceParameters)
 {
     // Grab Parameterized Control Sequence.
     try
